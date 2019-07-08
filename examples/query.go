@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/graphql-go/graphql"
-	"xval.cn/gql/gql"
+	"github.com/seerx/gql/gql"
 )
 
 /*

@@ -1,7 +1,7 @@
 package examples
 
 import (
-	"xval.cn/gql/gql"
+	"github.com/seerx/gql/gql"
 )
 
 /**

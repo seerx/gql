@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"xval.cn/gql/gql"
+	"github.com/seerx/gql/gql"
 )
 
 func init() {

@@ -7,14 +7,16 @@ import (
 	"go/token"
 	"net/http"
 
-	_ "xval.cn/gql/examples"
-	"xval.cn/gql/gql"
+	_ "github.com/seerx/gql/examples"
+	"github.com/seerx/gql/gql"
 
 	"github.com/graphql-go/handler"
 )
 
 func runGraphQL() {
 	g := gql.Get()
+
+	// gql.Get().RegisterInject(examples.Sser)
 
 	handler := g.NewHandler(&handler.Config{
 		Pretty:   true,
