@@ -1,4 +1,4 @@
-package pkg
+package gqlh
 
 import "github.com/seerx/gql/utils"
 

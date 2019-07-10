@@ -1,4 +1,4 @@
-package pkg
+package gqlh
 
 import (
 	"github.com/graphql-go/graphql"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
-	"github.com/seerx/gql/pkg"
+	"github.com/seerx/gql/pkg/gqlh"
 	"github.com/seerx/gql/utils"
 )
 
@@ -18,14 +18,14 @@ type GQL struct {
 	customConfig  *handler.Config // 用户传入的 cfg
 	handlerConfig *handler.Config
 	// 生成的相关内容
-	registerInfos []*pkg.RegisterInfo
+	registerInfos []*gqlh.RegisterInfo
 
-	queryManager          *pkg.ResolverManager
-	mutationManager       *pkg.ResolverManager
-	responseObjectManager *pkg.ResponseObjectManager
-	requestObjectManager  *pkg.RequestObjectManager
+	queryManager          *gqlh.ResolverManager
+	mutationManager       *gqlh.ResolverManager
+	responseObjectManager *gqlh.ResponseObjectManager
+	requestObjectManager  *gqlh.RequestObjectManager
 	// 注入对象结构
-	inject *pkg.Inject
+	inject *gqlh.Inject
 	// 准备要注册的函数
 	tobeInject    []interface{} // 注入函数
 	tobeQueries   []interface{} // 查询函数
@@ -40,16 +40,16 @@ func init() {
 
 // NewGQL 创建 GQL 实例
 func NewGQL() *GQL {
-	inject := pkg.NewInject()
-	resObj := pkg.NewResponseObjectManager()
-	reqObj := pkg.NewRequestObjectManager()
+	inject := gqlh.NewInject()
+	resObj := gqlh.NewResponseObjectManager()
+	reqObj := gqlh.NewRequestObjectManager()
 	return &GQL{
 		handlerConfig:         new(handler.Config),
-		responseObjectManager: resObj, //  pkg.NewResponseObjectManager(),
-		requestObjectManager:  reqObj, // pkg.NewRequestObjectManager(),
-		queryManager:          pkg.NewQueryResolverManager(inject, resObj, reqObj),
-		mutationManager:       pkg.NewMutationResolverManager(inject, resObj, reqObj),
-		inject:                inject, //   pkg.NewInject(),
+		responseObjectManager: resObj, //  gqlh.NewResponseObjectManager(),
+		requestObjectManager:  reqObj, // gqlh.NewRequestObjectManager(),
+		queryManager:          gqlh.NewQueryResolverManager(inject, resObj, reqObj),
+		mutationManager:       gqlh.NewMutationResolverManager(inject, resObj, reqObj),
+		inject:                inject, //   gqlh.NewInject(),
 	}
 }
 
@@ -123,7 +123,7 @@ func (g *GQL) GetSchema() (*graphql.Schema, error) {
 	return g.schema, err
 }
 
-func (g *GQL) createSummary(filter func(info *pkg.RegisterInfo) bool) string {
+func (g *GQL) createSummary(filter func(info *gqlh.RegisterInfo) bool) string {
 	query := "Query:"
 	mutation := "\nMutation:"
 	for _, info := range g.registerInfos {
@@ -160,7 +160,7 @@ func (g *GQL) Summary() string {
 // SummaryOfFailed 列举注册失败的函数信息
 func (g *GQL) SummaryOfFailed() string {
 	return "** Register Failed List **\n---------------------------------------------------------------------------------\n" +
-		g.createSummary(func(info *pkg.RegisterInfo) bool {
+		g.createSummary(func(info *gqlh.RegisterInfo) bool {
 			return info.Error != ""
 		}) +
 		"---------------------------------------------------------------------------------\n"
@@ -171,7 +171,7 @@ func (g *GQL) RegisterMutation(query interface{}) {
 	g.tobeMutations = append(g.tobeMutations, query)
 }
 
-func (g *GQL) doRegisterResolver(manager *pkg.ResolverManager, resolveFunc interface{}) {
+func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc interface{}) {
 	funcType := reflect.TypeOf(resolveFunc)
 	kind := funcType.Kind()
 	if kind == reflect.Func {
