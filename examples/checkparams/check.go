@@ -1,8 +1,9 @@
 package main
 
 import (
+	"time"
+
 	"github.com/seerx/gql"
-	"github.com/seerx/gql/examples/entities"
 	"github.com/seerx/gql/pkg/gqlh"
 )
 
@@ -23,14 +24,24 @@ import (
 */
 
 func init() {
-	gql.Get().RegisterQuery(Require)
+	gql.Get().RegisterQuery(require)
 }
 
-// Require 必须的函数
-func Require(v *gqlh.InputValidator, in *entities.Goods) (*entities.Goods, error) {
+// goods 商品信息
+type goods struct {
+	ID    string    `json:"id" gql:"aaa"`
+	Name  string    `json:"name"`
+	Price float64   `json:"price"`
+	URL   string    `json:"url"`
+	Time  time.Time `json:"time"`
+	O     bool      `json:"o"`
+}
+
+// require 必须的参数检查
+func require(v *gqlh.InputValidator, in *goods) (*goods, error) {
 	v.Requires("id")
 
-	return &entities.Goods{
+	return &goods{
 		ID:    in.ID,
 		Name:  "热水器",
 		Price: 30.8,
