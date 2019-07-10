@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"github.com/graphql-go/graphql"
-	"github.com/seerx/gql/utils"
+	"github.com/seerx/gql/pkg/utils"
 )
 
 // Resolver 查询和操作函数定义

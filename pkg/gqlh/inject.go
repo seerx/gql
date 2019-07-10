@@ -8,7 +8,7 @@ import (
 	"reflect"
 
 	"github.com/graphql-go/graphql"
-	"github.com/seerx/gql/utils"
+	"github.com/seerx/gql/pkg/utils"
 )
 
 // Inject 注入结构

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/graphql-go/graphql"
-	"github.com/seerx/gql/utils"
+	"github.com/seerx/gql/pkg/utils"
 )
 
 // RequestObject 请求的参数对象定义

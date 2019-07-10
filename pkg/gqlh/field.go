@@ -1,6 +1,6 @@
 package gqlh
 
-import "github.com/seerx/gql/utils"
+import "github.com/seerx/gql/pkg/utils"
 
 // Field 字段，参数，结构字段等等
 type Field struct {

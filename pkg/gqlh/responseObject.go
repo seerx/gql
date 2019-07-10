@@ -2,7 +2,7 @@ package gqlh
 
 import (
 	"github.com/graphql-go/graphql"
-	"github.com/seerx/gql/utils"
+	"github.com/seerx/gql/pkg/utils"
 )
 
 // ResponseObject 返回对象说明定义

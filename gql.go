@@ -8,7 +8,7 @@ import (
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/seerx/gql/pkg/gqlh"
-	"github.com/seerx/gql/utils"
+	"github.com/seerx/gql/pkg/utils"
 )
 
 // GQL GraphSQL 辅助类
