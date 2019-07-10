@@ -56,3 +56,11 @@ func main() {
 启动后在浏览器输入 http://localhost:8080/graphql 即可看到接口信息
 
 # 约定
+<ol>
+	<li>定义的对象名称与结构名称完全一致</li>
+	<li>如果同一个结构既用做输入参数，那么定义的对象将以 “input” 打头</li>
+	<li>只有返回值是一个自定义结构（指针）和 error 的函数，且输入参数为一个自定义结构（指针）、任意个数注入结构（指针）、*gqlh.InputValidator 的组合才能作为 Query 和 Mutation 对象</li>
+	<li>定义的 Query 和 Mutation 名称与函数名称完全一致</li>
+	<li>出现 Query 或 Mutation 的函数名称相同时，将舍弃后面的函数</li>
+	<li>注入函数必须是固定形式</li>
+</ol>
