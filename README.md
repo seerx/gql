@@ -11,8 +11,8 @@
 
 # 例子
 <pre>
-// Goods 商品信息
-type Goods struct {
+// goods 商品信息
+type goods struct {
 	ID    string    `json:"id"`
 	Name  string    `json:"name"`
 	Price float64   `json:"price"`
@@ -20,13 +20,13 @@ type Goods struct {
 	Time  time.Time `json:"time"`
 }
 
-// GoodsList 查询函数定义
-func GoodsList() ([]Goods, error) {
-	return []entities.Goods{
-		entities.Goods{
+// goodsList 查询函数定义
+func goodsList() ([]goods, error) {
+	return []goods{
+		goods{
 			ID: "A1", Name: "A-test1",
 		},
-		entities.Goods{
+		goods{
 			ID: "A2", Name: "A-test2",
 		},
 	}, nil
@@ -34,7 +34,7 @@ func GoodsList() ([]Goods, error) {
 
 func init() {
 	// 注册查询
-	gql.Get().RegisterQuery(GoodsList)
+	gql.Get().RegisterQuery(goodsList)
 }
 
 func main() {
@@ -63,4 +63,13 @@ func main() {
 	<li>定义的 Query 和 Mutation 名称与函数名称完全一致</li>
 	<li>出现 Query 或 Mutation 的函数名称相同时，将舍弃后面的函数</li>
 	<li>注入函数必须是固定形式</li>
+</ol>
+
+# 更详细的使用方法 examples
+<ol>
+	<li>hello 简单示例</li>
+	<li>query Query 示例</li>
+	<li>mutation Mutation 示例</li>
+	<li>inject 注入示例</li>
+	<li>checkparams 参数检测示例</li>
 </ol>
