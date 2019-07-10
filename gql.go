@@ -118,8 +118,9 @@ func (g *GQL) GetSchema() (*graphql.Schema, error) {
 			Mutation: g.mutationManager.CreateResolveObject(),
 		},
 	)
-	g.schema = &schema
-
+	if err == nil {
+		g.schema = &schema
+	}
 	return g.schema, err
 }
 
@@ -167,8 +168,9 @@ func (g *GQL) SummaryOfFailed() string {
 }
 
 // RegisterMutation 注册操作，加入到待注册列表
-func (g *GQL) RegisterMutation(query interface{}) {
-	g.tobeMutations = append(g.tobeMutations, query)
+// @param mutation 可以是一个函数，也可以是一个有多个函数的结构体
+func (g *GQL) RegisterMutation(mutation interface{}) {
+	g.tobeMutations = append(g.tobeMutations, mutation)
 }
 
 func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc interface{}) {
@@ -199,11 +201,14 @@ func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc inte
 // }
 
 // RegisterInject 注册注入函数,只是加入到待注册列表
+// @param injectFn 必须是一个函数，且函数必须是一下形式
+// 		func injectFn(ctx, context.Context, r *http.Request) *CustomStruct
 func (g *GQL) RegisterInject(injectFn interface{}) {
 	g.tobeInject = append(g.tobeInject, injectFn)
 }
 
 // RegisterQuery 注册查询
+// @param query 可以是一个函数，也可以是一个有多个函数的结构体
 func (g *GQL) RegisterQuery(query interface{}) {
 	g.tobeQueries = append(g.tobeQueries, query)
 }

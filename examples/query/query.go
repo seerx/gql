@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/graphql-go/graphql"
 	"github.com/seerx/gql"
-	"github.com/seerx/gql/examples/object"
-	"github.com/seerx/gql/pkg"
+	"github.com/seerx/gql/examples/entities"
 )
 
 /*
@@ -43,7 +41,9 @@ type GoodsQuery struct{}
 func init() {
 	g := gql.Get()
 	// 注册
+	// 把 GoodsQuery 结构的所有方法注册为 Query 操作
 	g.RegisterQuery(GoodsQuery{})
+	// 把 AGoodsList 方法注册为 Query 操作
 	g.RegisterQuery(AGoodsList)
 }
 
@@ -60,8 +60,8 @@ func (good GoodsQuery) GoodsList() ([]entities.Goods, error) {
 }
 
 // Goods 查询
-func (good GoodsQuery) Goods(param *entities.Goods, s *Ss) (*entities.Goods, error) {
-	fmt.Printf("Inject value: %s\n", s.A)
+func (good GoodsQuery) Goods(param *entities.Goods) (*entities.Goods, error) {
+	// fmt.Printf("Inject value: %s\n", s.A)
 	return &entities.Goods{
 		ID:    param.ID,
 		Name:  "热水器",
@@ -71,16 +71,16 @@ func (good GoodsQuery) Goods(param *entities.Goods, s *Ss) (*entities.Goods, err
 }
 
 // Test sd
-func (good GoodsQuery) Test(v *gqlh.InputValidator, in *entities.Goods) (*entities.Goods, error) {
-	v.Requires("id")
+// func (good GoodsQuery) Test(v *gqlh.InputValidator, in *entities.Goods) (*entities.Goods, error) {
+// 	v.Requires("id")
 
-	return &entities.Goods{
-		ID:    in.ID,
-		Name:  "热水器",
-		Price: 30.8,
-		URL:   "http://www.sohu.com",
-	}, nil
-}
+// 	return &entities.Goods{
+// 		ID:    in.ID,
+// 		Name:  "热水器",
+// 		Price: 30.8,
+// 		URL:   "http://www.sohu.com",
+// 	}, nil
+// }
 
 // AGoodsList 单个函数
 func AGoodsList(p graphql.ResolveParams) ([]entities.Goods, error) {

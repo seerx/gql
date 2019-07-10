@@ -120,7 +120,7 @@ func (ij *Inject) Inject(injectFn interface{}) {
 		// 类型不对
 		panic(errOfInject)
 	}
-	// 第 2 各参数 *http.Request
+	// 第 2 个参数 *http.Request
 	in = typ.In(1)
 	inp = utils.ParseTypeProp(in)
 	if !inp.IsPtr { // 不是指针
