@@ -18,6 +18,7 @@ type Resolver struct {
 	outError               *Field
 	params                 []*Field
 	executor               reflect.Value
+	inputCheckFn           ValidatorFn    // 输入参数检查函数
 	input                  *RequestObject // 输入参数
 	isGraphQLParamInParams bool           // params 是否包含 GraphSQL resolve 参数
 	isValidatorInParams    bool           // params 是否包含 InputValidator
@@ -91,8 +92,13 @@ func (rm *ResolverManager) CreateResolveObject() *graphql.Object {
 		})
 }
 
-// RegisterMutationResolver 注册函数
-func (rm *ResolverManager) RegisterMutationResolver(pkg string, funcName string, funcType reflect.Type, function reflect.Value, structInstance interface{}) *RegisterInfo {
+// RegisterResolver 注册函数
+func (rm *ResolverManager) RegisterResolver(pkg string,
+	funcName string,
+	funcType reflect.Type,
+	function reflect.Value,
+	validateFn ValidatorFn,
+	structInstance interface{}) *RegisterInfo {
 	structName := ""
 	if structInstance != nil {
 		structType := reflect.TypeOf(structInstance)
@@ -112,7 +118,7 @@ func (rm *ResolverManager) RegisterMutationResolver(pkg string, funcName string,
 		Func:    funcName,
 	}
 
-	r, err := rm.TryParseResolver(funcType, function, structInstance)
+	r, err := rm.TryParseResolver(funcType, function, structInstance, validateFn)
 	if err == nil {
 		rm.resolverMap[funcName] = r
 		// g.mutations = append(g.mutations, info)
@@ -160,12 +166,16 @@ func (rm *ResolverManager) RegisterMutationResolver(pkg string, funcName string,
 // }
 
 // TryParseResolver 尝试把函数解析为 Resolver
-func (rm *ResolverManager) TryParseResolver(functionType reflect.Type, function reflect.Value, structInstance interface{}) (*Resolver, error) {
+func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
+	function reflect.Value,
+	structInstance interface{},
+	inputCheckFn ValidatorFn) (*Resolver, error) {
 	// method := reflect.TypeOf(function)
 	res := &Resolver{
 		manager:        rm,
 		structInstance: structInstance,
 		executor:       function,
+		inputCheckFn:   inputCheckFn,
 	}
 
 	// 函数返回值必须是两个，建议为两个：(其他类型, error)
@@ -287,13 +297,15 @@ func (r *Resolver) CreateField() *graphql.Field {
 	field.Resolve = func(p graphql.ResolveParams) (interface{}, error) {
 		args := make([]reflect.Value, len(r.params))
 
-		var validator *InputValidator
+		validator := &InputValidator{
+			validatorFn: r.inputCheckFn,
+		}
 		var input reflect.Value
 		// 构建参数
 		if r.input != nil {
 			// 生成输入数据结构
 			var err error
-			input, validator, err = parseInput(&p, r.input)
+			input, err = validator.ParseInput(&p, r.input)
 			if err != nil {
 				return nil, err
 			}

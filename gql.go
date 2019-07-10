@@ -27,9 +27,14 @@ type GQL struct {
 	// 注入对象结构
 	inject *gqlh.Inject
 	// 准备要注册的函数
-	tobeInject    []interface{} // 注入函数
-	tobeQueries   []interface{} // 查询函数
-	tobeMutations []interface{} // 操作函数
+	tobeInject    []interface{}    // 注入函数
+	tobeQueries   []*resolveWraper // 查询函数
+	tobeMutations []*resolveWraper // 操作函数
+}
+
+type resolveWraper struct {
+	function     interface{}
+	inputCheckFn gqlh.ValidatorFn
 }
 
 var instance *GQL
@@ -103,12 +108,12 @@ func (g *GQL) GetSchema() (*graphql.Schema, error) {
 	// 注册查询函数
 	for _, obj := range g.tobeQueries {
 		// g.doRegisterQuery(obj)
-		g.doRegisterResolver(g.queryManager, obj)
+		g.doRegisterResolver(g.queryManager, obj.function, obj.inputCheckFn)
 	}
 	// 注册操作函数
 	for _, obj := range g.tobeMutations {
 		// g.doRegisterMutation(obj)
-		g.doRegisterResolver(g.mutationManager, obj)
+		g.doRegisterResolver(g.mutationManager, obj.function, obj.inputCheckFn)
 	}
 
 	// 生成 graphql 结构
@@ -169,18 +174,41 @@ func (g *GQL) SummaryOfFailed() string {
 
 // RegisterMutation 注册操作，加入到待注册列表
 // @param mutation 可以是一个函数，也可以是一个有多个函数的结构体
-func (g *GQL) RegisterMutation(mutation interface{}) {
-	g.tobeMutations = append(g.tobeMutations, mutation)
+func (g *GQL) RegisterMutation(mutation interface{}, validateFn gqlh.ValidatorFn) {
+	g.RegisterMutationWithValidateFn(mutation, nil)
 }
 
-func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc interface{}) {
+// RegisterMutationWithValidateFn 注册操作，并提供输入参数验证函数
+func (g *GQL) RegisterMutationWithValidateFn(mutation interface{}, validateFn gqlh.ValidatorFn) {
+	g.tobeMutations = append(g.tobeMutations, &resolveWraper{
+		function:     mutation,
+		inputCheckFn: validateFn,
+	})
+}
+
+// RegisterQuery 注册查询
+// @param query 可以是一个函数，也可以是一个有多个函数的结构体
+func (g *GQL) RegisterQuery(query interface{}) {
+	g.RegisterQueryWithValidateFn(query, nil)
+}
+
+// RegisterQueryWithValidateFn 注册查询，并提供一个输入参数验证函数
+// @param query 可以是一个函数，也可以是一个有多个函数的结构体
+func (g *GQL) RegisterQueryWithValidateFn(query interface{}, validateFn gqlh.ValidatorFn) {
+	g.tobeQueries = append(g.tobeQueries, &resolveWraper{
+		function:     query,
+		inputCheckFn: validateFn,
+	})
+}
+
+func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc interface{}, validateFn gqlh.ValidatorFn) {
 	funcType := reflect.TypeOf(resolveFunc)
 	kind := funcType.Kind()
 	if kind == reflect.Func {
 		// 是一个函数
 		val := reflect.ValueOf(resolveFunc)
 		funcInfo := utils.ParseFuncInfo(resolveFunc)
-		info := manager.RegisterMutationResolver(funcInfo.Pkg, funcInfo.Name, funcType, val, nil)
+		info := manager.RegisterResolver(funcInfo.Pkg, funcInfo.Name, funcType, val, validateFn, nil)
 		g.registerInfos = append(g.registerInfos, info)
 	} else if kind == reflect.Struct {
 		// 是一个结构，遍历其所有函数
@@ -189,16 +217,11 @@ func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc inte
 		for n := 0; n < funcType.NumMethod(); n++ {
 			method := funcType.Method(n)
 			name := method.Name
-			info := manager.RegisterMutationResolver(pkg, name, method.Type, method.Func, resolveFunc)
+			info := manager.RegisterResolver(pkg, name, method.Type, method.Func, validateFn, resolveFunc)
 			g.registerInfos = append(g.registerInfos, info)
 		}
 	}
 }
-
-// 执行注册操作
-// func (g *GQL) doRegisterMutation(mutation interface{}) {
-// 	g.doRegisterResolver(g.mutationManager, mutation)
-// }
 
 // RegisterInject 注册注入函数,只是加入到待注册列表
 // @param injectFn 必须是一个函数，且函数必须是一下形式
@@ -206,15 +229,3 @@ func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc inte
 func (g *GQL) RegisterInject(injectFn interface{}) {
 	g.tobeInject = append(g.tobeInject, injectFn)
 }
-
-// RegisterQuery 注册查询
-// @param query 可以是一个函数，也可以是一个有多个函数的结构体
-func (g *GQL) RegisterQuery(query interface{}) {
-	g.tobeQueries = append(g.tobeQueries, query)
-}
-
-// 执行注册查询
-// @return 返回注册成功的函数数量
-// func (g *GQL) doRegisterQuery(query interface{}) {
-// 	g.doRegisterResolver(g.queryManager, query)
-// }
