@@ -1,5 +1,5 @@
 # gql
-简化 graphql-go 开发，使用 graphql 的原始接口开发非常繁琐，稍有不慎就会出错。该项目就是为了简化 golang 开发 graphql 过程而生。
+简化 <a href="https://github.com/graphql-go/graphql">graphql-go</a> 开发，使用 graphql 的原始接口开发非常繁琐，稍有不慎就会出错。该项目就是为了简化 golang 开发 graphql 过程而生。
 
 # 简化内容
 <ol>
@@ -67,9 +67,9 @@ func main() {
 
 # 更详细的使用方法 examples
 <ol>
-	<li>hello 简单示例</li>
-	<li>query Query 示例</li>
-	<li>mutation Mutation 示例</li>
-	<li>inject 注入示例</li>
-	<li>checkparams 参数检测示例</li>
+	<li><a href="https://github.com/seerx/gql/tree/master/examples/hello">hello 简单示例</a></li>
+	<li><a href="https://github.com/seerx/gql/tree/master/examples/query">query Query 示例</a></li>
+	<li><a href="https://github.com/seerx/gql/tree/master/examples/mutation">mutation Mutation 示例</a></li>
+	<li><a href="https://github.com/seerx/gql/tree/master/examples/inject">inject 注入示例</a></li>
+	<li><a href="https://github.com/seerx/gql/tree/master/examples/checkparams">checkparams 参数检测示例</a></li>
 </ol>
