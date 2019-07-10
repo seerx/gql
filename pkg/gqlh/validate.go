@@ -52,8 +52,8 @@ func parseInput(param *graphql.ResolveParams, arg *RequestObject) (reflect.Value
 	for _, field := range arg.Fields {
 		// field.Prop.Type.
 
-		inputVal := pmap[field.JSONName]
-		if inputVal == nil {
+		inputVal, ok := pmap[field.JSONName]
+		if !ok {
 			// 未提交的参数
 			validator.params[field.JSONName] = &paramStatus{
 				Error: fmt.Sprintf("参数 %s 未提交", field.JSONName),
