@@ -9,6 +9,11 @@ import (
 	"github.com/seerx/gql/examples/entities"
 )
 
+// Hello 示例
+type Hello struct {
+	Message string
+}
+
 func init() {
 	gql.Get().RegisterQuery(func() (*entities.Hello, error) {
 		return &entities.Hello{
