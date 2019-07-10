@@ -174,7 +174,7 @@ func (g *GQL) SummaryOfFailed() string {
 
 // RegisterMutation 注册操作，加入到待注册列表
 // @param mutation 可以是一个函数，也可以是一个有多个函数的结构体
-func (g *GQL) RegisterMutation(mutation interface{}, validateFn gqlh.ValidatorFn) {
+func (g *GQL) RegisterMutation(mutation interface{}) {
 	g.RegisterMutationWithValidateFn(mutation, nil)
 }
 
