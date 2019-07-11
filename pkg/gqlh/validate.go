@@ -10,12 +10,14 @@ import (
 )
 
 // ValidatorFn 自定义验证函数
-type ValidatorFn func()
+type ValidatorFn func(paramName string, paramValue interface{}, inputParam graphql.ResolveParams) error
 
 // InputValidator 输入参数验证
 type InputValidator struct {
-	validatorFn ValidatorFn
-	params      map[string]*paramStatus
+	validatorFn          ValidatorFn
+	requestObjectManager *RequestObjectManager
+	graphqlParam         graphql.ResolveParams
+	params               map[string]*paramStatus
 }
 
 type paramStatus struct {
@@ -33,22 +35,74 @@ func (v *InputValidator) Requires(params ...string) {
 	}
 }
 
-func (v *InputValidator) checkValidate(field *Field, val interface{}) {
+func (v *InputValidator) checkValidate(paramName string, field *Field, val interface{}) {
 	tp := reflect.TypeOf(val)
 	kd := tp.Kind()
 	if utils.IsStringType(kd) {
 		// TODO 字符串，可以检测 长度和正则表达式
-		return
+		// return
 	} else if utils.IsIntType(kd) {
 		// TODO 整形，可以检测最大值和最小值
-		return
+		// return
 	}
 	// 使用自定义函数检测参数
-	v.validatorFn()
+	err := v.validatorFn(paramName, val, v.graphqlParam)
+	if err != nil {
+		v.params[paramName] = &paramStatus{
+			Error: err.Error(),
+		}
+	}
 }
 
-func (v *InputValidator) parseField() {
+func (v *InputValidator) parseField(parentParam string, input map[string]interface{}, arg *RequestObject) reflect.Value {
+	res := reflect.New(arg.Param.Prop.RealType)
+	elem := res.Elem()
 
+	for _, field := range arg.Fields {
+		paramKey := field.JSONName
+		if parentParam != "" {
+			paramKey = parentParam + "." + paramKey
+		}
+
+		inputVal, ok := input[field.JSONName]
+		if !ok {
+			// 未提交的参数
+			v.params[paramKey] = &paramStatus{
+				Error: fmt.Sprintf("参数 %s 未提交", paramKey),
+			}
+			continue
+		}
+
+		resField := elem.FieldByName(field.Name)
+		if utils.IsStructType(field.Prop.Kind) && !utils.IsTimeType(field.Prop.RealType) {
+			// 结构类型，且不是时间类型
+			inputMap := inputVal.(map[string]interface{})
+			argType := v.requestObjectManager.FindOrRegisterObject(field, "")
+			val := v.parseField(paramKey, inputMap, argType)
+			resField.Set(val)
+			v.checkValidate(paramKey, field, inputVal)
+			continue
+		}
+
+		val := reflect.ValueOf(inputVal)
+
+		if val.Type() != resField.Type() {
+			// 类型不匹配
+			v.params[paramKey] = &paramStatus{
+				Error: fmt.Sprintf("参数 %s 类型不匹配，期望类型：%s, 实际类型：%s",
+					paramKey,
+					resField.Type().Name(),
+					val.Type().Name()),
+			}
+			continue
+		}
+
+		// 赋值
+		resField.Set(val)
+		// 规则检查
+		v.checkValidate(paramKey, field, inputVal)
+	}
+	return res
 }
 
 // ParseInput 解析输入参数
@@ -57,11 +111,22 @@ func (v *InputValidator) ParseInput(param *graphql.ResolveParams, arg *RequestOb
 	if !ok {
 		return reflect.ValueOf(nil), fmt.Errorf("Required arguments: %s. ", arg.Name)
 	}
+	v.params = make(map[string]*paramStatus)
+
+	return v.parseField("", pmap, arg), nil
+}
+
+// ParseInput1 解析输入参数
+func (v *InputValidator) ParseInput1(param *graphql.ResolveParams, arg *RequestObject) (reflect.Value, error) {
+	pmap, ok := param.Args[arg.Name].(map[string]interface{})
+	if !ok {
+		return reflect.ValueOf(nil), fmt.Errorf("Required arguments: %s. ", arg.Name)
+	}
+	v.params = make(map[string]*paramStatus)
+	// arg.Fields[9].Prop.Key()
 
 	res := reflect.New(arg.Param.Prop.RealType)
 	elem := res.Elem()
-
-	v.params = make(map[string]*paramStatus)
 
 	for _, field := range arg.Fields {
 		inputVal, ok := pmap[field.JSONName]
@@ -87,7 +152,7 @@ func (v *InputValidator) ParseInput(param *graphql.ResolveParams, arg *RequestOb
 		// 赋值
 		resField.Set(val)
 		// 规则检查
-		v.checkValidate(field, inputVal)
+		v.checkValidate("", field, inputVal)
 	}
 
 	return res, nil

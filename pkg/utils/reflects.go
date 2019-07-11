@@ -145,5 +145,9 @@ func ParseStructFieldName(field *reflect.StructField) string {
 		// tmp := strings.ToLower(string(name[0]))
 		// name = strings.Replace(name, string(name[0]), tmp, 1)
 	}
+	dotp := strings.Index(name, ",")
+	if dotp >= 0 {
+		return name[0:dotp]
+	}
 	return name
 }

@@ -9,7 +9,7 @@ import (
 
 // RequestObject 请求的参数对象定义
 type RequestObject struct {
-	Object *graphql.InputObject
+	Object graphql.Input
 	Param  *Field   // 对应的参数
 	Name   string   // 结构名称
 	Fields []*Field // 结构中的字段列表
@@ -51,27 +51,49 @@ func (objm *RequestObjectManager) FindOrRegisterObject(field *Field, name string
 		var fields []*Field
 		for n := 0; n < p.RealType.NumField(); n++ {
 			field := p.RealType.Field(n)
+			prop := utils.ParseTypeProp(field.Type)
+			id := utils.ParseStructFieldName(&field)
 			typeField := new(graphql.InputObjectFieldConfig)
 			ftype, isStruct := utils.StructFieldTypeToGraphType(&field)
-			if isStruct {
-				// 是结构类型，不支持
-				return nil
-			}
-			id := utils.ParseStructFieldName(&field)
-			prop := utils.ParseTypeProp(field.Type)
-			// 存储结构字段
-			// prop.structField = field
-			fields = append(fields, &Field{
+			fd := &Field{
 				Name:     field.Name,
 				JSONName: id,
 				Prop:     prop,
-			})
-
+			}
 			typeField.Type = ftype
+
+			if isStruct {
+				// 是结构类型，递归生成
+				typeField.Type = objm.FindOrRegisterObject(fd, id).Object
+			}
+
+			if prop.IsList {
+				// 是列表，不知道怎么支持列表，所以不允许出现列表参数
+				return nil
+
+				// var lstObj graphql.Input
+				// if isStruct {
+				// 	// 是结构
+				// 	lstObj = graphql.NewList(typeField.Type)
+
+				// } else {
+				// 	// 不是结构
+				// 	lstObj = graphql.NewList(typeField.Type)
+				// }
+				// objm.objectMap[prop.KeyOfList()] = &RequestObject{
+				// 	Object: lstObj,
+				// 	Param:  fd,
+				// 	Name:   name,
+				// 	Fields: fields,
+				// }
+			}
+
+			// 存储结构字段
+			// prop.structField = field
+			fields = append(fields, fd)
 
 			objFields[id] = typeField
 		}
-
 		// 注册单个查询对象
 		gobj := graphql.NewInputObject(
 			graphql.InputObjectConfig{

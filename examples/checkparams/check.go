@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/graphql-go/graphql"
 	"github.com/seerx/gql"
 	"github.com/seerx/gql/pkg/gqlh"
 )
@@ -24,7 +26,19 @@ import (
 */
 
 func init() {
-	gql.Get().RegisterQuery(require)
+	gql.Get().RegisterQueryWithValidateFn(require, func(paramName string, paramValue interface{}, inputParam graphql.ResolveParams) error {
+		fmt.Println(paramName)
+		// if "id" == paramName {
+		// 	return errors.New("ID Test")
+		// }
+		return nil
+	})
+}
+
+// Storage asa
+type Storage struct {
+	Addr string
+	Code string
 }
 
 // goods 商品信息
@@ -33,8 +47,9 @@ type goods struct {
 	Name  string    `json:"name"`
 	Price float64   `json:"price"`
 	URL   string    `json:"url"`
-	Time  time.Time `json:"time"`
+	Time  time.Time `json:"time,omitempty"`
 	O     bool      `json:"o"`
+	S     *Storage
 }
 
 // require 必须的参数检查
@@ -46,5 +61,9 @@ func require(v *gqlh.InputValidator, in *goods) (*goods, error) {
 		Name:  "热水器",
 		Price: 30.8,
 		URL:   "http://www.sohu.com",
+		S: &Storage{
+			Addr: in.S.Addr,
+			Code: "00001",
+		},
 	}, nil
 }

@@ -298,7 +298,9 @@ func (r *Resolver) CreateField() *graphql.Field {
 		args := make([]reflect.Value, len(r.params))
 
 		validator := &InputValidator{
-			validatorFn: r.inputCheckFn,
+			validatorFn:          r.inputCheckFn,
+			graphqlParam:         p,
+			requestObjectManager: r.manager.reqObjManager,
 		}
 		var input reflect.Value
 		// 构建参数
