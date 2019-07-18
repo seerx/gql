@@ -234,6 +234,12 @@ func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
 				return nil, errors.New("函数接收验证结构时，必须使用指针类型")
 			}
 			res.isValidatorInParams = true
+		} else if prop.Kind == reflect.Interface {
+			// 接口类型，必须是注入类型
+			inject := rm.inject.FindInject(prop.RealType)
+			if inject == nil {
+				return nil, errors.New("函数 interface 参数必须是注入类型")
+			}
 		} else if prop.Kind == reflect.Struct {
 			if !prop.IsPtr {
 				// 必须是指针类型
@@ -329,6 +335,14 @@ func (r *Resolver) CreateField() *graphql.Field {
 			} else if param.Prop.RealType == typeOfInputValidator {
 				// 验证参数
 				args[n] = reflect.ValueOf(validator)
+			} else if param.Prop.Kind == reflect.Interface {
+				inject := r.manager.inject.FindInject(param.Prop.RealType)
+				if inject != nil {
+					args[n] = inject.CallFn(&p)
+				} else {
+					// 不可能出现
+					args[n] = reflect.ValueOf(nil)
+				}
 			} else if param.Prop.Kind == reflect.Struct {
 				// 结构参数
 				// 查找注入
