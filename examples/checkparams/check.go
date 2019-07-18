@@ -25,7 +25,7 @@ import (
 }
 */
 
-func init() {
+func registerGQL() {
 	gql.Get().RegisterQueryWithValidateFn(require, func(paramName string, paramValue interface{}, inputParam graphql.ResolveParams) error {
 		fmt.Println(paramName)
 		// if "id" == paramName {

@@ -6,7 +6,6 @@ import (
 
 	"github.com/graphql-go/handler"
 	"github.com/seerx/gql"
-	"github.com/seerx/gql/examples/entities"
 )
 
 // Hello 示例
@@ -15,8 +14,8 @@ type Hello struct {
 }
 
 func init() {
-	gql.Get().RegisterQuery(func() (*entities.Hello, error) {
-		return &entities.Hello{
+	gql.Get().RegisterQuery(func() (*Hello, error) {
+		return &Hello{
 			Message: "Hello GQL!",
 		}, nil
 	})

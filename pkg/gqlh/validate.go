@@ -46,10 +46,12 @@ func (v *InputValidator) checkValidate(paramName string, field *Field, val inter
 		// return
 	}
 	// 使用自定义函数检测参数
-	err := v.validatorFn(paramName, val, v.graphqlParam)
-	if err != nil {
-		v.params[paramName] = &paramStatus{
-			Error: err.Error(),
+	if v.validatorFn != nil {
+		err := v.validatorFn(paramName, val, v.graphqlParam)
+		if err != nil {
+			v.params[paramName] = &paramStatus{
+				Error: err.Error(),
+			}
 		}
 	}
 }
