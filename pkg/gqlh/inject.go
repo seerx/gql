@@ -92,14 +92,17 @@ func (ij *Inject) Inject(injectFn interface{}) {
 	}
 	out := typ.Out(0)
 	outp := utils.ParseTypeProp(out)
-	if !outp.IsPtr { // 返回值不是指针类型
-		panic(errOfInject)
-	}
-	if outp.IsPrimitive { // 返回值是原始类型
-		panic(errOfInject)
-	}
-	if outp.Kind != reflect.Struct { // 返回值不是结构类型
-		panic(errOfInject)
+
+	if outp.Kind != reflect.Interface {
+		if !outp.IsPtr { // 返回值不是指针类型
+			panic(errOfInject)
+		}
+		if outp.IsPrimitive { // 返回值是原始类型
+			panic(errOfInject)
+		}
+		if outp.Kind != reflect.Struct { // 返回值不是结构类型
+			panic(errOfInject)
+		}
 	}
 
 	inject, ok := ij.injectMap[outp.RealType]
