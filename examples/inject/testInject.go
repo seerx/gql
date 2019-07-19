@@ -12,8 +12,9 @@ func init() {
 }
 
 // UseInject 测试注入信息
-func UseInject(a *Account) (*entities.Goods, error) {
+func UseInject(a *Account, ai A) (*entities.Goods, error) {
 	fmt.Printf("Inject value: %s\n", a)
+	ai.Do("nonono")
 	return &entities.Goods{
 		ID:    a.String(),
 		Name:  "热水器",

@@ -54,7 +54,7 @@ type goods struct {
 
 // require 必须的参数检查
 func require(v *gqlh.InputValidator, in *goods) (*goods, error) {
-	v.Requires("id")
+	v.Requires("id", "S.Addr")
 
 	return &goods{
 		ID:    in.ID,

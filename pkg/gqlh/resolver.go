@@ -3,6 +3,7 @@ package gqlh
 import (
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 
 	"github.com/graphql-go/graphql"
@@ -13,15 +14,17 @@ import (
 type Resolver struct {
 	manager *ResolverManager
 	// gql                    *GQL
-	structInstance         interface{} // 结构内方法
-	out                    *Field
-	outError               *Field
-	params                 []*Field
-	executor               reflect.Value
-	inputCheckFn           ValidatorFn    // 输入参数检查函数
-	input                  *RequestObject // 输入参数
-	isGraphQLParamInParams bool           // params 是否包含 GraphSQL resolve 参数
-	isValidatorInParams    bool           // params 是否包含 InputValidator
+	structInstance interface{} // 结构内方法
+	out            *Field
+	outError       *Field
+	params         []*Field
+	executor       reflect.Value
+	inputCheckFn   ValidatorFn    // 输入参数检查函数
+	input          *RequestObject // 输入参数
+	//isGraphQLParamInParams bool           // params 是否包含 GraphSQL resolve 参数
+	//isValidatorInParams    bool           // params 是否包含 InputValidator
+
+	funcInputParams []inputParam // 函数输入参数
 }
 
 // ResolverManager 管理器
@@ -133,38 +136,6 @@ func (rm *ResolverManager) RegisterResolver(pkg string,
 	return info
 }
 
-// func (g *GQL) registerQueryResolver(pkg string, funcName string, funcType reflect.Type, function reflect.Value, structInstance interface{}) int {
-// 	// pkg := funcType.PkgPath()
-// 	structName := ""
-// 	if structInstance != nil {
-// 		structType := reflect.TypeOf(structInstance)
-// 		structName = structType.Name()
-// 	}
-
-// 	_, ok := g.queryResolvers[funcName]
-// 	if ok {
-// 		panic(fmt.Errorf("Query Resolve [%s] exists", funcName))
-// 	}
-
-// 	info := registerInfo{
-// 		Package: pkg,
-// 		Struct:  structName,
-// 		Func:    funcName,
-// 	}
-
-// 	r, err := parseResolver(funcType, function, structInstance, g)
-// 	if err == nil {
-// 		g.queryResolvers[funcName] = r
-// 		g.queries = append(g.queries, info)
-// 		return 1
-// 	}
-
-// 	info.Error = err.Error()
-// 	g.queries = append(g.queries, info)
-
-// 	return 0
-// }
-
 // TryParseResolver 尝试把函数解析为 Resolver
 func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
 	function reflect.Value,
@@ -214,6 +185,8 @@ func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
 	// 至多包含一个 自定义 struct 类型的指针参数
 	//			  struct 中的字段必须是 string, int, float, time.Time, bool 类型
 	inCount := functionType.NumIn()
+	res.funcInputParams = make([]inputParam, inCount)
+	res.params = make([]*Field, inCount)
 	for n := 0; n < inCount; n++ {
 		inParam := functionType.In(n)
 
@@ -223,22 +196,31 @@ func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
 		}
 
 		if n == 0 && structInstance != nil {
+			res.funcInputParams[n] = &ipStruct{}
 			// 结构体参数
 		} else if prop.RealType == typeOfResolveParams {
+			res.funcInputParams[n] = &ipGraphqlResolveParams{
+				valueIsPtr: prop.IsPtr,
+			}
 			// GraphSQL param 参数,可用
-			res.isGraphQLParamInParams = true
+			//res.isGraphQLParamInParams = true
 		} else if prop.RealType == typeOfInputValidator {
 			// 参数验证结构
 			if !prop.IsPtr {
 				// 必须是指针类型
 				return nil, errors.New("函数接收验证结构时，必须使用指针类型")
 			}
-			res.isValidatorInParams = true
+			res.funcInputParams[n] = &ipValidator{}
+			//res.isValidatorInParams = true
 		} else if prop.Kind == reflect.Interface {
-			// 接口类型，必须是注入类型
+			// 接口，必须是注入类型
 			inject := rm.inject.FindInject(prop.RealType)
 			if inject == nil {
 				return nil, errors.New("函数 interface 参数必须是注入类型")
+			}
+			res.funcInputParams[n] = &ipInject{
+				valueIsInterface: true,
+				inject:           inject,
 			}
 		} else if prop.Kind == reflect.Struct {
 			if !prop.IsPtr {
@@ -261,13 +243,20 @@ func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
 					// 不支持的结构
 					return nil, errors.New("函数接收数据的 struct 的字段只能是 string, int, float, time, bool 类型")
 				}
+				// 是结构类型请求参数
+				res.funcInputParams[n] = &ipRequest{}
+			} else { // 是注入类型
+				res.funcInputParams[n] = &ipInject{
+					valueIsInterface: false,
+					inject:           inject,
+				}
 			}
 		} else {
 			// 不支持的数据类型
 			return nil, errors.New("函数只接受 gql.InputValidator、graphql.ResolveParams 和自定义结构类型的参数")
 		}
 
-		res.params = append(res.params, p)
+		res.params[n] = p //  append(res.params, p)
 	}
 
 	return res, nil
@@ -301,7 +290,6 @@ func (r *Resolver) CreateField() *graphql.Field {
 
 	// 生成 Resolve
 	field.Resolve = func(p graphql.ResolveParams) (interface{}, error) {
-		args := make([]reflect.Value, len(r.params))
 
 		validator := &InputValidator{
 			validatorFn:          r.inputCheckFn,
@@ -319,44 +307,72 @@ func (r *Resolver) CreateField() *graphql.Field {
 			}
 		}
 
-		for n, param := range r.params {
-			if r.structInstance != nil && n == 0 {
-				// 结构方法，第一个参数是结构实例
-				args[n] = reflect.ValueOf(r.structInstance)
-				continue
-			}
-			if param.Prop.RealType == typeOfResolveParams {
-				// 原始参数
-				if param.Prop.IsPtr {
-					args[n] = reflect.ValueOf(&p)
-				} else {
-					args[n] = reflect.ValueOf(p)
-				}
-			} else if param.Prop.RealType == typeOfInputValidator {
-				// 验证参数
-				args[n] = reflect.ValueOf(validator)
-			} else if param.Prop.Kind == reflect.Interface {
-				inject := r.manager.inject.FindInject(param.Prop.RealType)
-				if inject != nil {
-					args[n] = inject.CallFn(&p)
-				} else {
-					// 不可能出现
-					args[n] = reflect.ValueOf(nil)
-				}
-			} else if param.Prop.Kind == reflect.Struct {
-				// 结构参数
-				// 查找注入
-				inject := r.manager.inject.FindInject(param.Prop.RealType)
-				if inject != nil {
-					// 注入参数
-					args[n] = inject.CallFn(&p)
-				} else {
-					// 提交参数
-					args[n] = input
-				}
-			}
+		args := make([]reflect.Value, len(r.funcInputParams))
 
+		//[]
+
+		var closers []io.Closer
+
+		defer func() {
+			if closers != nil {
+				for _, c := range closers {
+					c.Close()
+				}
+			}
+		}()
+
+		for n, ip := range r.funcInputParams {
+			args[n] = ip.createValue(r.structInstance,
+				&p,
+				validator,
+				input,
+			)
+			if ip.isInjectInterface() {
+				// 判断 值是否是 io.Closer
+				if closer := IsCloser(args[n]); closer != nil {
+					closers = append(closers, closer)
+				}
+			}
 		}
+
+		//for n, param := range r.params {
+		//	if r.structInstance != nil && n == 0 {
+		//		// 结构方法，第一个参数是结构实例
+		//		args[n] = reflect.ValueOf(r.structInstance)
+		//		continue
+		//	}
+		//	if param.Prop.RealType == typeOfResolveParams {
+		//		// 原始参数
+		//		if param.Prop.IsPtr {
+		//			args[n] = reflect.ValueOf(&p)
+		//		} else {
+		//			args[n] = reflect.ValueOf(p)
+		//		}
+		//	} else if param.Prop.RealType == typeOfInputValidator {
+		//		// 验证参数
+		//		args[n] = reflect.ValueOf(validator)
+		//	} else if param.Prop.Kind == reflect.Interface {
+		//		inject := r.manager.inject.FindInject(param.Prop.RealType)
+		//		if inject != nil {
+		//			args[n] = inject.CallFn(&p)
+		//		} else {
+		//			// 不可能出现
+		//			args[n] = reflect.ValueOf(nil)
+		//		}
+		//	} else if param.Prop.Kind == reflect.Struct {
+		//		// 结构参数
+		//		// 查找注入
+		//		inject := r.manager.inject.FindInject(param.Prop.RealType)
+		//		if inject != nil {
+		//			// 注入参数
+		//			args[n] = inject.CallFn(&p)
+		//		} else {
+		//			// 提交参数
+		//			args[n] = input
+		//		}
+		//	}
+		//
+		//}
 
 		res := r.executor.Call(args)
 

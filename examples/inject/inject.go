@@ -10,6 +10,7 @@ import (
 
 func init() {
 	gql.Get().RegisterInject(InjectAccount)
+	gql.Get().RegisterInject(InjectInterface)
 }
 
 // Account 测试
@@ -20,6 +21,27 @@ type Account struct {
 
 func (a *Account) String() string {
 	return fmt.Sprintf("{id: %s, name: %s}", a.ID, a.Name)
+}
+
+type A interface {
+	Do(a string)
+}
+
+type AI struct {
+}
+
+func (*AI) Do(a string) {
+	fmt.Println(a)
+}
+
+func (*AI) Close() error {
+	fmt.Println("Call Close")
+	return nil
+}
+
+// InjectInterface 注入接口
+func InjectInterface(ctx context.Context, r *http.Request) A {
+	return &AI{}
 }
 
 // InjectAccount 测试

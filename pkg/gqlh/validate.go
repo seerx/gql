@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/graphql-go/graphql"
 	"github.com/seerx/gql/pkg/utils"
@@ -29,8 +30,12 @@ var typeOfInputValidator = reflect.TypeOf(InputValidator{})
 // Requires 必须参数
 func (v *InputValidator) Requires(params ...string) {
 	for _, p := range params {
-		if msg, ok := v.params[p]; ok {
-			panic(errors.New(msg.Error))
+		sub := strings.Split(p, ".")
+		for n, _ := range sub {
+			k := strings.Join(sub[:n+1], ".")
+			if msg, ok := v.params[k]; ok {
+				panic(errors.New(msg.Error))
+			}
 		}
 	}
 }
