@@ -225,7 +225,7 @@ func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc inte
 
 // RegisterInject 注册注入函数,只是加入到待注册列表
 // @param injectFn 必须是一个函数，且函数必须是一下形式
-// 		func injectFn(ctx, context.Context, r *http.Request) *CustomStruct
+// 		func injectFn(ctx, context.Context, r *http.Request, gp *graphql.ResolveParams) *CustomStruct
 func (g *GQL) RegisterInject(injectFn interface{}) {
 	g.tobeInject = append(g.tobeInject, injectFn)
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/graphql-go/graphql"
+
 	"github.com/seerx/gql"
 )
 
@@ -40,12 +42,12 @@ func (*AI) Close() error {
 }
 
 // InjectInterface 注入接口
-func InjectInterface(ctx context.Context, r *http.Request) A {
+func InjectInterface(ctx context.Context, r *http.Request, gp *graphql.ResolveParams) A {
 	return &AI{}
 }
 
 // InjectAccount 测试
-func InjectAccount(ctx context.Context, r *http.Request) *Account {
+func InjectAccount(ctx context.Context, r *http.Request, gp *graphql.ResolveParams) *Account {
 	// 可以读取 http.Request 的 cookie 等信息，完后从缓存（或数据库）中获取 Account 信息
 	// 如果无法获取，则可以 panic 一个错误信息，此错误将会返回到客户端
 	// if Cann't get account info {

@@ -26,8 +26,12 @@ func NewInject() *Inject {
 const keyOfConext = "context"
 const keyOfRequest = "request"
 
-var errOfInject = errors.New("Param injectFn must be a func  like -- func(ctx context.Context, r *http.Request) *returnType, and returnType must be a struct")
+var errOfInject = errors.New("Param injectFn must be a func  like -- func(ctx context.Context, r *http.Request, gp *graphql.ResolveParams) *returnType, and returnType must be a struct or interface")
 var typeOfHTTPRequest = reflect.TypeOf(http.Request{})
+var typeOfContext = reflect.TypeOf((*context.Context)(nil)).Elem()
+var typeOfGqlParams = reflect.TypeOf(graphql.ResolveParams{})
+
+//var typeOfHTTPRequest = reflect.TypeOf(http.Request{})
 
 // InjectInfo 注入对象结构
 type InjectInfo struct {
@@ -53,9 +57,10 @@ func (i *InjectInfo) CallFn(p *graphql.ResolveParams) reflect.Value {
 		panic(errors.New("No http.Request int root value"))
 	}
 
-	args := make([]reflect.Value, 2)
+	args := make([]reflect.Value, 3)
 	args[0] = reflect.ValueOf(ctx)
 	args[1] = reflect.ValueOf(req)
+	args[2] = reflect.ValueOf(p)
 
 	// 调用注入函数
 	res := i.Fn.Call(args)
@@ -76,6 +81,26 @@ func (ij *Inject) FindInject(typ reflect.Type) *InjectInfo {
 func (ij *Inject) StoreContext(ctx context.Context, r *http.Request, root map[string]interface{}) {
 	root[keyOfConext] = ctx
 	root[keyOfRequest] = r
+}
+
+func checkInputArg(arg reflect.Type, target reflect.Type) {
+	inp := utils.ParseTypeProp(arg)
+	if inp.Kind == reflect.Interface {
+		// 接口类型
+		tp := utils.ParseTypeProp(target)
+		if inp.RealType != tp.RealType {
+			// 类型不对
+			panic(errOfInject)
+		}
+	} else {
+		if !inp.IsPtr { // 不是指针
+			panic(errOfInject)
+		}
+		if inp.RealType != target {
+			// 类型不对
+			panic(errOfInject)
+		}
+	}
 }
 
 // Inject 注入函数
@@ -112,27 +137,32 @@ func (ij *Inject) Inject(injectFn interface{}) {
 
 	// 判断输入参数
 	inCount := typ.NumIn()
-	if inCount != 2 {
+	if inCount != 3 {
 		panic(errOfInject)
 	}
 	// 第 1 个参数 context.Context
-	in := typ.In(0)
+	//in := typ.In(0)
+	checkInputArg(typ.In(0), typeOfContext)
 
-	inp := utils.ParseTypeProp(in)
-	if !inp.IsContext() {
-		// 类型不对
-		panic(errOfInject)
-	}
+	//inp := utils.ParseTypeProp(in)
+	//if !inp.IsContext() {
+	//	// 类型不对
+	//	panic(errOfInject)
+	//}
 	// 第 2 个参数 *http.Request
-	in = typ.In(1)
-	inp = utils.ParseTypeProp(in)
-	if !inp.IsPtr { // 不是指针
-		panic(errOfInject)
-	}
-	if inp.RealType != typeOfHTTPRequest {
-		// 类型不对
-		panic(errOfInject)
-	}
+	//in = typ.In(1)
+	checkInputArg(typ.In(1), typeOfHTTPRequest)
+	//inp = utils.ParseTypeProp(in)
+	//if !inp.IsPtr { // 不是指针
+	//	panic(errOfInject)
+	//}
+	//if inp.RealType != typeOfHTTPRequest {
+	//	// 类型不对
+	//	panic(errOfInject)
+	//}
+
+	// 第 3 个参数 *graphql.ResolveParams
+	checkInputArg(typ.In(2), typeOfGqlParams)
 
 	// 注册函数
 	fnInfo := utils.ParseFuncInfo(injectFn)
