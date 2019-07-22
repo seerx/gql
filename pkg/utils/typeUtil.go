@@ -20,7 +20,7 @@ func StructFieldTypeToGraphType(field *reflect.StructField) (grapghType graphql.
 	if isPtr || isList {
 		// 指针、切片、数组
 		// field.Type.Elem()
-		kind = field.Type.Elem().Kind()
+		//kind = field.Type.Elem().Kind()
 		tp = field.Type.Elem()
 	}
 
@@ -30,6 +30,9 @@ func StructFieldTypeToGraphType(field *reflect.StructField) (grapghType graphql.
 	}
 	if isStruct {
 		return nil, true
+	}
+	if isList {
+		return graphql.NewList(gType), false
 	}
 	return gType, false
 }

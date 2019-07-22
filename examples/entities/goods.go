@@ -10,4 +10,5 @@ type Goods struct {
 	URL   string    `json:"url"`
 	Time  time.Time `json:"time"`
 	O     bool      `json:"o"`
+	Ary   []string  `json:"ary"`
 }
