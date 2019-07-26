@@ -8,11 +8,18 @@ import (
 )
 
 func init() {
-	gql.Get().RegisterQuery(UseInject)
+	gql.Get().RegisterQuery(O{})
+}
+
+type O struct {
+}
+
+func (O) UseInjectDesc() string {
+	return `测试注入功能`
 }
 
 // UseInject 测试注入信息
-func UseInject(a *Account, ai A) (*entities.Goods, error) {
+func (O) UseInject(a *Account, ai A) (*entities.Goods, error) {
 	fmt.Printf("Inject value: %s\n", a)
 	ai.Do("nonono")
 	return &entities.Goods{

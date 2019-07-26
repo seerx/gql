@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/seerx/gql/pkg/def"
+
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/seerx/gql/pkg/gqlh"
@@ -208,7 +210,16 @@ func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc inte
 		// 是一个函数
 		val := reflect.ValueOf(resolveFunc)
 		funcInfo := utils.ParseFuncInfo(resolveFunc)
-		info := manager.RegisterResolver(funcInfo.Pkg, funcInfo.Name, funcType, val, validateFn, nil)
+
+		fn := &def.FuncInfo{
+			Pkg:    funcInfo.Pkg,
+			Name:   funcInfo.Name,
+			Type:   funcType,
+			Func:   val,
+			Struct: nil,
+		}
+
+		info := manager.RegisterResolver(fn, validateFn)
 		g.registerInfos = append(g.registerInfos, info)
 	} else if kind == reflect.Struct {
 		// 是一个结构，遍历其所有函数
@@ -217,7 +228,14 @@ func (g *GQL) doRegisterResolver(manager *gqlh.ResolverManager, resolveFunc inte
 		for n := 0; n < funcType.NumMethod(); n++ {
 			method := funcType.Method(n)
 			name := method.Name
-			info := manager.RegisterResolver(pkg, name, method.Type, method.Func, validateFn, resolveFunc)
+			fn := &def.FuncInfo{
+				Pkg:    pkg,
+				Name:   name,
+				Type:   method.Type,
+				Func:   method.Func,
+				Struct: resolveFunc,
+			}
+			info := manager.RegisterResolver(fn, validateFn)
 			g.registerInfos = append(g.registerInfos, info)
 		}
 	}

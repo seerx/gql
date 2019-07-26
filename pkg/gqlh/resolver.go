@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
+
+	"github.com/seerx/gql/pkg/def"
 
 	"github.com/graphql-go/graphql"
 	"github.com/seerx/gql/pkg/utils"
@@ -23,7 +26,7 @@ type Resolver struct {
 	input          *RequestObject // 输入参数
 	//isGraphQLParamInParams bool           // params 是否包含 GraphSQL resolve 参数
 	//isValidatorInParams    bool           // params 是否包含 InputValidator
-
+	describe        string       // 描述信息
 	funcInputParams []inputParam // 函数输入参数
 }
 
@@ -96,38 +99,36 @@ func (rm *ResolverManager) CreateResolveObject() *graphql.Object {
 }
 
 // RegisterResolver 注册函数
-func (rm *ResolverManager) RegisterResolver(pkg string,
-	funcName string,
-	funcType reflect.Type,
-	function reflect.Value,
-	validateFn ValidatorFn,
-	structInstance interface{}) *RegisterInfo {
-	structName := ""
-	if structInstance != nil {
-		structType := reflect.TypeOf(structInstance)
-		structName = structType.Name()
-		// structName = structType.Elem().Name()
-	}
+func (rm *ResolverManager) RegisterResolver(fn *def.FuncInfo,
+	//pkg string,
+	//funcName string,
+	//funcType reflect.Type,
+	//function reflect.Value,
+	validateFn ValidatorFn) *RegisterInfo {
 
-	_, ok := rm.resolverMap[funcName]
+	structName := fn.GetStructName()
+
+	_, ok := rm.resolverMap[fn.Name]
 	if ok {
-		panic(fmt.Errorf("Mutation Resolve [%s] exists", funcName))
+		panic(fmt.Errorf("Mutation Resolve [%s] exists", fn.Name))
 	}
 
 	info := &RegisterInfo{
 		Type:    rm.name,
-		Package: pkg,
+		Package: fn.Pkg,
 		Struct:  structName,
-		Func:    funcName,
+		Func:    fn.Name,
 	}
 
-	r, err := rm.TryParseResolver(funcType, function, structInstance, validateFn)
+	r, err := rm.TryParseResolver(fn, validateFn)
 	if err == nil {
-		rm.resolverMap[funcName] = r
-		// g.mutations = append(g.mutations, info)
-		// return 1
+		rm.resolverMap[fn.Name] = r
 	} else {
-		info.Error = err.Error()
+		// 注册失败
+		if !strings.HasSuffix(fn.Name, "Desc") {
+			// 函数名称不是以 Desc 结尾的，记录注册失败原因
+			info.Error = err.Error()
+		}
 	}
 
 	// info.Error = err.Error()
@@ -137,27 +138,29 @@ func (rm *ResolverManager) RegisterResolver(pkg string,
 }
 
 // TryParseResolver 尝试把函数解析为 Resolver
-func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
-	function reflect.Value,
-	structInstance interface{},
+func (rm *ResolverManager) TryParseResolver(fn *def.FuncInfo,
+	//functionType reflect.Type,
+	//function reflect.Value,
+	//structInstance interface{},
 	inputCheckFn ValidatorFn) (*Resolver, error) {
 	// method := reflect.TypeOf(function)
 	res := &Resolver{
 		manager:        rm,
-		structInstance: structInstance,
-		executor:       function,
+		structInstance: fn.Struct,
+		executor:       fn.Func,
 		inputCheckFn:   inputCheckFn,
+		describe:       fn.GetDescribe(),
 	}
 
 	// 函数返回值必须是两个，建议为两个：(其他类型, error)
 	// 否则不认为是一个 resolver
 	// 解析返回值
-	outCount := functionType.NumOut()
+	outCount := fn.Type.NumOut()
 	if outCount != 2 { // 返回值必须是 2 个
 		return nil, errors.New("函数必须有两个返回值，且第二个必须是 error 类型")
 	}
 	for n := 0; n < outCount; n++ {
-		outParam := functionType.Out(n)
+		outParam := fn.Type.Out(n)
 		prop := utils.ParseTypeProp(outParam)
 		if n == 0 {
 			// 第一个参数
@@ -184,18 +187,18 @@ func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
 	// 至多包含一个 InputValidator 类型的指针参数
 	// 至多包含一个 自定义 struct 类型的指针参数
 	//			  struct 中的字段必须是 string, int, float, time.Time, bool 类型
-	inCount := functionType.NumIn()
+	inCount := fn.Type.NumIn()
 	res.funcInputParams = make([]inputParam, inCount)
 	res.params = make([]*Field, inCount)
 	for n := 0; n < inCount; n++ {
-		inParam := functionType.In(n)
+		inParam := fn.Type.In(n)
 
 		prop := utils.ParseTypeProp(inParam)
 		p := &Field{
 			Prop: prop,
 		}
 
-		if n == 0 && structInstance != nil {
+		if n == 0 && fn.Struct != nil {
 			res.funcInputParams[n] = &ipStruct{}
 			// 结构体参数
 		} else if prop.RealType == typeOfResolveParams {
@@ -264,7 +267,9 @@ func (rm *ResolverManager) TryParseResolver(functionType reflect.Type,
 
 // CreateField 创建操作对象
 func (r *Resolver) CreateField() *graphql.Field {
-	var field = graphql.Field{}
+	var field = graphql.Field{
+		Description: r.describe,
+	}
 
 	// 解析返回参数，注册 object
 	if r.out.Prop.IsPrimitive {
