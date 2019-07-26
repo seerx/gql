@@ -17,11 +17,16 @@ func StructFieldTypeToGraphType(field *reflect.StructField) (grapghType graphql.
 	isPtr := kind == reflect.Ptr
 	isList := kind == reflect.Slice
 
-	if isPtr || isList {
+	if isPtr {
 		// 指针、切片、数组
 		// field.Type.Elem()
 		//kind = field.Type.Elem().Kind()
 		tp = field.Type.Elem()
+	} else if isList {
+		tp = field.Type.Elem()
+		if tp.Kind() == reflect.Ptr {
+			tp = tp.Elem()
+		}
 	}
 
 	gType, isStruct, err := TypeToGraphQLType(tp)
