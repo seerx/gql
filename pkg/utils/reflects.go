@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -21,6 +22,10 @@ type TypeProp struct {
 	IsPrimitive bool // 是否原生类型
 	IsPtr       bool // 是否指针
 	IsList      bool // 是否列表，切片
+
+	// 以下属性来自于对 tag 的解析
+	ValChecker []ValueChecker
+	Desc       string
 }
 
 // Key 类型唯一标识
@@ -150,4 +155,123 @@ func ParseStructFieldName(field *reflect.StructField) string {
 		return name[0:dotp]
 	}
 	return name
+}
+
+// ParseFieldDesc 解析字段说明
+func ParseFieldDesc(field *reflect.StructField) string {
+	tag := field.Tag.Get("gql")
+	if tag == "" {
+		return ""
+	}
+	items := strings.Split(tag, ",")
+	for _, item := range items {
+		if item == "" {
+			continue
+		}
+		ary := strings.Split(item, "=")
+		if len(ary) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(ary[0])
+		val := strings.TrimSpace(ary[1])
+		if key == "" || val == "" {
+			continue
+		}
+
+		switch key {
+		case "desc":
+			return val
+		}
+	}
+	return ""
+}
+
+// ParseValueCheckers 解析数据验证定义
+func ParseValueCheckers(prop *TypeProp, field *reflect.StructField) {
+	tag := field.Tag.Get("gql")
+	if tag == "" {
+		return
+	}
+	items := strings.Split(tag, ",")
+	for _, item := range items {
+		if item == "" {
+			continue
+		}
+		ary := strings.Split(item, "=")
+		if len(ary) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(ary[0])
+		val := strings.TrimSpace(ary[1])
+		if key == "" || val == "" {
+			continue
+		}
+
+		switch key {
+		case "desc":
+			prop.Desc = val
+		case "lt", "le":
+			if IsIntType(prop.Kind) {
+				// 整形
+				intVal, err := strconv.Atoi(val)
+				if err != nil {
+					panic(err)
+				}
+				prop.ValChecker = append(prop.ValChecker, &IntegerMax{
+					Max:   intVal,
+					Equal: key == "le",
+				})
+			} else if IsFloatType(prop.Kind) {
+				// 浮点型
+				floatVal, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					panic(err)
+				}
+				prop.ValChecker = append(prop.ValChecker, &FloatMax{
+					Max:   floatVal,
+					Equal: key == "le",
+				})
+			} else if IsStringType(prop.Kind) {
+				intVal, err := strconv.Atoi(val)
+				if err != nil {
+					panic(err)
+				}
+				prop.ValChecker = append(prop.ValChecker, &StringMax{
+					Max:   intVal,
+					Equal: key == "le",
+				})
+			}
+		case "gt", "ge":
+			if IsIntType(prop.Kind) {
+				// 整形
+				intVal, err := strconv.Atoi(val)
+				if err != nil {
+					panic(err)
+				}
+				prop.ValChecker = append(prop.ValChecker, &IntegerMin{
+					Min:   intVal,
+					Equal: key == "ge",
+				})
+			} else if IsFloatType(prop.Kind) {
+				// 浮点型
+				floatVal, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					panic(err)
+				}
+				prop.ValChecker = append(prop.ValChecker, &FloatMin{
+					Min:   floatVal,
+					Equal: key == "ge",
+				})
+			} else if IsStringType(prop.Kind) {
+				intVal, err := strconv.Atoi(val)
+				if err != nil {
+					panic(err)
+				}
+				prop.ValChecker = append(prop.ValChecker, &StringMin{
+					Min:   intVal,
+					Equal: key == "ge",
+				})
+			}
+		}
+	}
 }

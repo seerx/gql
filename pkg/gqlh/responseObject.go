@@ -46,11 +46,23 @@ func (objm *ResponseObjectManager) FindOrRegisterObject(field *Field) *ResponseO
 		obj, ok = objm.objectMap[key]
 	}
 	if !ok {
-		// 没有找到，注册
-		objFields := graphql.Fields{}
-
+		// 没有找到，
+		// 注册
 		p := field.Prop
 		name := p.TypeName
+
+		objFields := graphql.Fields{}
+		// 注册单个查询对象
+		gobj := graphql.NewObject(graphql.ObjectConfig{
+			Name:   name,
+			Fields: objFields,
+		})
+		obj = objm.registerObject(field, gobj)
+		if list {
+			// 是数组
+			obj = objm.registerList(field, graphql.NewList(gobj))
+		}
+
 		// typeField := new(graphql.Field)
 		for n := 0; n < p.RealType.NumField(); n++ {
 			field := p.RealType.Field(n)
@@ -66,20 +78,13 @@ func (objm *ResponseObjectManager) FindOrRegisterObject(field *Field) *ResponseO
 				typeField.Type = ftype
 			}
 			id := utils.ParseStructFieldName(&field)
+			//utils.ParseValueCheckers(prop, &field)
+			desc := utils.ParseFieldDesc(&field)
+			typeField.Description = desc
+
 			objFields[id] = typeField
 		}
 
-		// 注册单个查询对象
-		gobj := graphql.NewObject(graphql.ObjectConfig{
-			Name:   name,
-			Fields: objFields,
-		})
-
-		obj = objm.registerObject(field, gobj)
-		if list {
-			// 是数组
-			obj = objm.registerList(field, graphql.NewList(gobj))
-		}
 	}
 	return obj
 }

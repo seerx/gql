@@ -31,7 +31,7 @@ var typeOfInputValidator = reflect.TypeOf(InputValidator{})
 func (v *InputValidator) Requires(params ...string) {
 	for _, p := range params {
 		sub := strings.Split(p, ".")
-		for n, _ := range sub {
+		for n := range sub {
 			k := strings.Join(sub[:n+1], ".")
 			if msg, ok := v.params[k]; ok {
 				panic(errors.New(msg.Error))
@@ -41,15 +41,25 @@ func (v *InputValidator) Requires(params ...string) {
 }
 
 func (v *InputValidator) checkValidate(paramName string, field *Field, val interface{}) {
-	tp := reflect.TypeOf(val)
-	kd := tp.Kind()
-	if utils.IsStringType(kd) {
-		// TODO 字符串，可以检测 长度和正则表达式
-		// return
-	} else if utils.IsIntType(kd) {
-		// TODO 整形，可以检测最大值和最小值
-		// return
+	//tp := reflect.TypeOf(val)
+	//kd := tp.Kind()
+	for _, ck := range field.Prop.ValChecker {
+		err := ck.Passed(val)
+		if err != nil {
+			panic(paramName + ":" + err.Error())
+			//v.params[paramName] = &paramStatus{
+			//	Error: err.Error(),
+			//}
+			//return
+		}
 	}
+	//if utils.IsStringType(kd) {
+	//	// TODO 字符串，可以检测 长度和正则表达式
+	//	// return
+	//} else if utils.IsIntType(kd) {
+	//	// TODO 整形，可以检测最大值和最小值
+	//	// return
+	//}
 	// 使用自定义函数检测参数
 	if v.validatorFn != nil {
 		err := v.validatorFn(paramName, val, v.graphqlParam)

@@ -319,10 +319,8 @@ func (r *Resolver) CreateField() *graphql.Field {
 		var closers []io.Closer
 
 		defer func() {
-			if closers != nil {
-				for _, c := range closers {
-					c.Close()
-				}
+			for _, c := range closers {
+				c.Close()
 			}
 		}()
 
