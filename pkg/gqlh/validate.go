@@ -71,6 +71,25 @@ func (v *InputValidator) checkValidate(paramName string, field *Field, val inter
 	}
 }
 
+//var a uin
+
+var aryTypes = map[string]reflect.Type{
+	"string":  reflect.TypeOf([]string{}),
+	"int":     reflect.TypeOf([]int{}),
+	"int8":    reflect.TypeOf([]int{}),
+	"int16":   reflect.TypeOf([]int{}),
+	"int32":   reflect.TypeOf([]int{}),
+	"int64":   reflect.TypeOf([]int{}),
+	"uint":    reflect.TypeOf([]uint{}),
+	"uint8":   reflect.TypeOf([]uint{}),
+	"uint16":  reflect.TypeOf([]uint{}),
+	"uint32":  reflect.TypeOf([]uint{}),
+	"uint64":  reflect.TypeOf([]uint{}),
+	"float":   reflect.TypeOf([]float64{}),
+	"float32": reflect.TypeOf([]float64{}),
+	"float64": reflect.TypeOf([]float64{}),
+}
+
 func (v *InputValidator) parseField(parentParam string, input map[string]interface{}, arg *RequestObject) reflect.Value {
 	res := reflect.New(arg.Param.Prop.RealType)
 	elem := res.Elem()
@@ -101,21 +120,59 @@ func (v *InputValidator) parseField(parentParam string, input map[string]interfa
 			continue
 		}
 
-		val := reflect.ValueOf(inputVal)
+		var val reflect.Value
 
-		if val.Type() != resField.Type() {
-			// 类型不匹配
-			v.params[paramKey] = &paramStatus{
-				Error: fmt.Sprintf("参数 %s 类型不匹配，期望类型：%s, 实际类型：%s",
-					paramKey,
-					resField.Type().Name(),
-					val.Type().Name()),
+		vType := reflect.TypeOf(inputVal)
+
+		if field.Prop.IsList && vType.Kind() == reflect.Slice {
+			ary := inputVal.([]interface{})
+			if utils.IsStructType(field.Prop.Kind) && !utils.IsTimeType(field.Prop.RealType) {
+				// 结构类型
+				v.params[paramKey] = &paramStatus{
+					Error: fmt.Sprintf("%s 暂不支持结构数组提交的参数",
+						paramKey),
+				}
+				continue
+				//item := reflect.New(field.Prop.RealType)
+			} else {
+				aryType, ok := aryTypes[field.Prop.RealType.Name()]
+				if !ok {
+					v.params[paramKey] = &paramStatus{
+						Error: fmt.Sprintf("参数 %s 找不到对应的数组类型 %s",
+							paramKey,
+							field.Prop.RealType.Name()),
+					}
+					continue
+				}
+				//var intfType = reflect.TypeOf((interface{})(nil))
+				//var typ = vType.Elem()
+				val = reflect.MakeSlice(aryType, 0, len(ary))
+				//var aryVal []interface{}
+				for _, a := range ary {
+					val = reflect.Append(val, reflect.ValueOf(a))
+					//aryVal = append(aryVal, a)
+				}
+
+				//val = reflect.ValueOf(aryVal)
 			}
-			continue
+		} else {
+			val = reflect.ValueOf(inputVal)
+
+			if val.Type() != resField.Type() {
+				// 类型不匹配
+				v.params[paramKey] = &paramStatus{
+					Error: fmt.Sprintf("参数 %s 类型不匹配，期望类型：%s, 实际类型：%s",
+						paramKey,
+						resField.Type().Name(),
+						val.Type().Name()),
+				}
+				continue
+			}
 		}
 
 		// 赋值
 		resField.Set(val)
+		//resField.CallSlice()
 		// 规则检查
 		v.checkValidate(paramKey, field, inputVal)
 	}
