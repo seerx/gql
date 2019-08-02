@@ -147,11 +147,11 @@ func (smin *StringMin) Passed(val interface{}) error {
 	n := len(str)
 
 	if smin.Equal {
-		if n > smin.Min {
+		if n < smin.Min {
 			return fmt.Errorf("the string's length must great then(or equal): %d", smin.Min)
 		}
 	} else {
-		if n >= smin.Min {
+		if n <= smin.Min {
 			return fmt.Errorf("the string's length must great then: %d", smin.Min)
 		}
 	}
