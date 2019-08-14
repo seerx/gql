@@ -275,6 +275,9 @@ func (r *Resolver) CreateField() *graphql.Field {
 	if r.out.Prop.IsPrimitive {
 		var err error
 		field.Type, _, err = utils.TypeToGraphQLType(r.out.Prop.RealType)
+		if r.out.Prop.IsList {
+			field.Type = graphql.NewList(field.Type)
+		}
 		if err != nil {
 			panic(err)
 		}
