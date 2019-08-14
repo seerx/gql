@@ -51,6 +51,20 @@ func (objm *ResponseObjectManager) FindOrRegisterObject(field *Field) *ResponseO
 		p := field.Prop
 		name := p.TypeName
 
+		if p.IsPrimitive {
+			// 原生类型
+			gtyp, _, err := utils.TypeToGraphQLType(p.RealType)
+			if err != nil {
+				panic(err)
+			}
+			obj = objm.registerObject(field, gtyp)
+			if list {
+				// 是数组
+				obj = objm.registerList(field, graphql.NewList(gtyp))
+			}
+			return obj
+		}
+
 		objFields := graphql.Fields{}
 		// 注册单个查询对象
 		gobj := graphql.NewObject(graphql.ObjectConfig{
@@ -89,7 +103,7 @@ func (objm *ResponseObjectManager) FindOrRegisterObject(field *Field) *ResponseO
 	return obj
 }
 
-func (objm *ResponseObjectManager) registerObject(param *Field, obj *graphql.Object) *ResponseObject {
+func (objm *ResponseObjectManager) registerObject(param *Field, obj graphql.Output) *ResponseObject {
 	qobj := &ResponseObject{
 		Object: obj,
 		Param:  param,
