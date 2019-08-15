@@ -80,6 +80,12 @@ func (objm *ResponseObjectManager) FindOrRegisterObject(field *Field) *ResponseO
 		// typeField := new(graphql.Field)
 		for n := 0; n < p.RealType.NumField(); n++ {
 			field := p.RealType.Field(n)
+			id := utils.ParseStructFieldName(&field)
+
+			if id == "" {
+				continue
+			}
+
 			typeField := new(graphql.Field)
 			ftype, isStruct := utils.StructFieldTypeToGraphType(&field)
 			if isStruct {
@@ -91,7 +97,7 @@ func (objm *ResponseObjectManager) FindOrRegisterObject(field *Field) *ResponseO
 			} else {
 				typeField.Type = ftype
 			}
-			id := utils.ParseStructFieldName(&field)
+
 			//utils.ParseValueCheckers(prop, &field)
 			desc := utils.ParseFieldDesc(&field)
 			typeField.Description = desc

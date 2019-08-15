@@ -92,6 +92,9 @@ func (objm *RequestObjectManager) FindOrRegisterObject(field *Field, name string
 			field := p.RealType.Field(n)
 			prop := utils.ParseTypeProp(field.Type)
 			id := utils.ParseStructFieldName(&field)
+			if id == "" {
+				continue
+			}
 			utils.ParseValueCheckers(prop, &field)
 			typeField := new(graphql.InputObjectFieldConfig)
 			ftype, isStruct := utils.StructFieldTypeToGraphType(&field)
