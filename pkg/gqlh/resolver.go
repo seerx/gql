@@ -317,8 +317,6 @@ func (r *Resolver) CreateField() *graphql.Field {
 
 		args := make([]reflect.Value, len(r.funcInputParams))
 
-		//[]
-
 		var closers []io.Closer
 
 		defer func() {

@@ -13,12 +13,22 @@ type Hello struct {
 	Message string
 }
 
+func Test1() (string, error) {
+	return "", nil
+}
+
+func (Hello) Test1() (string, error) {
+	return "", nil
+}
+
 func init() {
 	gql.Get().RegisterQuery(func() (*Hello, error) {
 		return &Hello{
 			Message: "Hello GQL!",
 		}, nil
 	})
+	gql.Get().RegisterMutation(Test1)
+	gql.Get().RegisterQuery(Hello{})
 }
 
 func main() {
