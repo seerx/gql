@@ -1,3 +1,6 @@
+# 该项目不再维护
+该包的功能在 goql 中被继承，请跳转到 <a href="https://github.com/seerx/goql">goql</a>
+
 # gql
 简化 <a href="https://github.com/graphql-go/graphql">graphql-go</a> 开发，graphql-ql 提供的原始接口开发非常繁琐，稍有不慎就会出错。该项目就是为了简化 golang 开发 graphql 过程，让开发人员把更多的精力投入到业务逻辑的开发中。
 
